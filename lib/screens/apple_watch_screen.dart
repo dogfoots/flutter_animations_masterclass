@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class AppleWatchScreen extends StatefulWidget {
@@ -9,7 +10,54 @@ class AppleWatchScreen extends StatefulWidget {
   State<AppleWatchScreen> createState() => _AppleWatchScreenState();
 }
 
-class _AppleWatchScreenState extends State<AppleWatchScreen> {
+class _AppleWatchScreenState extends State<AppleWatchScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animationController = AnimationController(
+    vsync: this,
+    duration: Duration(seconds: 2),
+  )..forward();
+
+  late final CurvedAnimation _curve =
+      CurvedAnimation(parent: _animationController, curve: Curves.bounceOut);
+
+  late List<Animation<double>> _progresses =
+      List.generate(3, (index) => _makeTween(_curve));
+
+  Animation<double> _makeTween(CurvedAnimation curve) {
+    return Tween(
+      begin: 0.005,
+      end: Random().nextDouble() * 2.0,
+    ).animate(curve);
+  }
+
+  /*
+  late Animation<double> _progress = Tween(
+    begin: 0.005,
+    end: Random().nextDouble() * 2.0,
+  ).animate(_curve);*/
+
+  void _animatedValues() {
+    //_animationController.forward();
+    List<Animation<double>> newProgresses = [];
+    _progresses.forEach((element) {
+      final newBegin = element.value;
+      final random = Random();
+      final newEnd = random.nextDouble() * 2.0;
+      newProgresses.add(Tween(begin: newBegin, end: newEnd).animate(_curve));
+    });
+
+    setState(() {
+      _progresses = newProgresses;
+    });
+    _animationController.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -19,16 +67,32 @@ class _AppleWatchScreenState extends State<AppleWatchScreen> {
           foregroundColor: Colors.white,
           title: Text('Apple Watch')),
       body: Center(
-        child: CustomPaint(
-          painter: AppleWatchPainter(),
-          size: Size(400, 400),
+        child: AnimatedBuilder(
+          animation: _animationController,
+          builder: (context, child) {
+            return CustomPaint(
+              painter: AppleWatchPainter(
+                  progresses: _progresses.map((e) => e.value).toList()),
+              size: Size(400, 400),
+            );
+          },
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _animatedValues,
+        child: Icon(Icons.refresh),
       ),
     );
   }
 }
 
 class AppleWatchPainter extends CustomPainter {
+  final List<double> progresses;
+
+  AppleWatchPainter({
+    required this.progresses,
+  });
+
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.width / 2);
@@ -66,7 +130,8 @@ class AppleWatchPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 25;
-    canvas.drawArc(redArcRect, startingAngle, 1.5 * pi, false, redArcPaint);
+    canvas.drawArc(
+        redArcRect, startingAngle, progresses[0] * pi, false, redArcPaint);
 
     final greenArcRect =
         Rect.fromCircle(center: center, radius: greenCircleRadius);
@@ -75,7 +140,8 @@ class AppleWatchPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 25;
-    canvas.drawArc(greenArcRect, startingAngle, 1.5 * pi, false, greenArcPaint);
+    canvas.drawArc(
+        greenArcRect, startingAngle, progresses[1] * pi, false, greenArcPaint);
 
     final blueArcRect =
         Rect.fromCircle(center: center, radius: blueCircleRadius);
@@ -84,7 +150,8 @@ class AppleWatchPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 25;
-    canvas.drawArc(blueArcRect, startingAngle, 1.5 * pi, false, blueArcPaint);
+    canvas.drawArc(
+        blueArcRect, startingAngle, progresses[2] * pi, false, blueArcPaint);
 
     /*final rect = Rect.fromLTWH(0, 0, size.width, size.height);
 
@@ -101,7 +168,7 @@ class AppleWatchPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
+  bool shouldRepaint(covariant AppleWatchPainter oldDelegate) {
+    return !listEquals(oldDelegate.progresses, progresses);
   }
 }
