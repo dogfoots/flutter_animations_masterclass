@@ -32,25 +32,29 @@ class _SwipingCardsScreenState extends State<SwipingCardsScreen>
     _position.value += details.delta.dx;
   }
 
+  void _goNextCard(bool direction) {
+    final dropZone = size.width + 100;
+    _position
+        .animateTo(
+      (direction ? -1.0 : 1.0) * dropZone,
+      curve: Curves.easeIn,
+    )
+        .whenComplete(() {
+      _position.value = 0;
+      setState(() {
+        _index = _index == 5 ? 1 : _index + 1;
+      });
+    });
+  }
+
   void _onHorizontalDragEnd(DragEndDetails details) {
     final bound = size.width - 200;
-    final dropZone = size.width + 100;
     if (_position.value.abs() >= bound) {
-      _position
-          .animateTo(
-        (_position.value.isNegative ? -1.0 : 1.0) * dropZone,
-        curve: Curves.bounceOut,
-      )
-          .whenComplete(() {
-        _position.value = 0;
-        setState(() {
-          _index = _index == 5 ? 1 : _index + 1;
-        });
-      });
+      _goNextCard(_position.value.isNegative);
     } else {
       _position.animateTo(
         0,
-        curve: Curves.bounceOut,
+        curve: Curves.easeIn,
       );
     }
   }
@@ -74,17 +78,20 @@ class _SwipingCardsScreenState extends State<SwipingCardsScreen>
         builder: (context, child) {
           final angle = _rotation
               .transform((_position.value + (size.width / 2)) / size.width);
-          final scale = _scale.transform(_position.value.abs() / size.width);
+          final scale =
+              min(_scale.transform(_position.value.abs() / size.width), 1.0);
+          final buttonScale = min(
+              _scale.transform(_position.value.abs() / size.width) + 0.2, 1.2);
           return Stack(alignment: Alignment.topCenter, children: [
             Positioned(
-              top: 100,
+              top: 50,
               child: Transform.scale(
                 scale: scale,
                 child: Card(index: _index == 5 ? 1 : _index + 1),
               ),
             ),
             Positioned(
-              top: 100,
+              top: 50,
               child: GestureDetector(
                 onHorizontalDragUpdate: _onHorizontalDragUpdate,
                 onHorizontalDragEnd: _onHorizontalDragEnd,
@@ -99,6 +106,64 @@ class _SwipingCardsScreenState extends State<SwipingCardsScreen>
                 ),
               ),
             ),
+            Positioned(
+              bottom: 50,
+              child: Row(children: [
+                GestureDetector(
+                  onTap: () {
+                    _goNextCard(true);
+                  },
+                  child: Transform.scale(
+                    scale: _position.value.isNegative ? buttonScale : 1.0,
+                    child: Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(60),
+                            color: Colors.white,
+                            boxShadow: const [
+                              BoxShadow(
+                                  offset: Offset(0, 5),
+                                  color: Colors.grey,
+                                  blurRadius: 5)
+                            ]),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.red,
+                          size: 40,
+                        )),
+                  ),
+                ),
+                const SizedBox(
+                  width: 20,
+                ),
+                GestureDetector(
+                  onTap: () {
+                    _goNextCard(false);
+                  },
+                  child: Transform.scale(
+                    scale: !_position.value.isNegative ? buttonScale : 1.0,
+                    child: Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(60),
+                            color: Colors.white,
+                            boxShadow: const [
+                              BoxShadow(
+                                  offset: Offset(0, 5),
+                                  color: Colors.grey,
+                                  blurRadius: 5)
+                            ]),
+                        child: const Icon(
+                          Icons.check,
+                          color: Colors.green,
+                          size: 40,
+                        )),
+                  ),
+                )
+              ]),
+            )
           ]);
         },
       ),
@@ -119,7 +184,7 @@ class Card extends StatelessWidget {
       clipBehavior: Clip.hardEdge,
       child: SizedBox(
         width: size.width * 0.8,
-        height: size.height * 0.5,
+        height: size.height * 0.65,
         child: Image.asset(
           "assets/images/$index.jpg",
           fit: BoxFit.cover,
